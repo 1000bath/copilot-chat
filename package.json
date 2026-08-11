@@ -1,0 +1,411 @@
+{
+  "name": "dek-copilot-chat",
+  "displayName": "Dek Copilot Chat",
+  "description": "Use AI models in GitHub Copilot Chat through Dek Gateway. Bring Your Own Key with native chat, tools, reasoning, and multimodal support.",
+  "version": "0.5.1",
+  "publisher": "1000bath",
+  "license": "MIT",
+  "icon": "media/dek-copilot-chat.png",
+  "galleryBanner": {
+    "color": "#0d1117",
+    "theme": "dark"
+  },
+  "keywords": [
+    "dek",
+    "copilot",
+    "copilot-chat",
+    "byok",
+    "bring-your-own-key",
+    "ai",
+    "language-model",
+    "openai",
+    "anthropic",
+    "claude",
+    "gpt",
+    "gemini",
+    "grok",
+    "deepseek",
+    "qwen",
+    "kimi",
+    "glm",
+    "minimax",
+    "mimo",
+    "llm",
+    "chat",
+    "agent",
+    "reasoning",
+    "thinking",
+    "free-models"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/1000bath/dek-copilot-chat.git"
+  },
+  "bugs": {
+    "url": "https://github.com/1000bath/dek-copilot-chat/issues"
+  },
+  "homepage": "https://github.com/1000bath/dek-copilot-chat#readme",
+  "engines": {
+    "vscode": "^1.125.0"
+  },
+  "categories": [
+    "AI",
+    "Machine Learning",
+    "Education",
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onLanguageModelChatProvider:dekgo",
+    "onLanguageModelChatProvider:dekzen",
+    "onLanguageModelChatProvider:dekgateway",
+    "onLanguageModelChatProvider:jonusgateway",
+    "onLanguageModelChatProvider:opencodego",
+    "onLanguageModelChatProvider:opencodezen"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "dekgo.manage",
+        "title": "Dek Go: Manage Provider"
+      },
+      {
+        "command": "dekgo.setApiKey",
+        "title": "Dek Go: Set API Key"
+      },
+      {
+        "command": "dekgo.refreshModels",
+        "title": "Dek Go: Refresh Models"
+      },
+      {
+        "command": "dekgo.configureUtilityModels",
+        "title": "Dek: Configure Utility Models"
+      },
+      {
+        "command": "dekgo.diagnostics",
+        "title": "Dek Go: Diagnostics"
+      },
+      {
+        "command": "dekzen.diagnostics",
+        "title": "Dek Zen: Diagnostics"
+      },
+      {
+        "command": "dekzen.manage",
+        "title": "Dek Zen: Manage Provider"
+      },
+      {
+        "command": "dekzen.refreshModels",
+        "title": "Dek Zen: Refresh Models"
+      },
+      {
+        "command": "dekgo.modelPickerDiagnostics",
+        "title": "Dek: Model Picker Diagnostics"
+      },
+      {
+        "command": "dekgo.setThinkingEffort",
+        "title": "Dek: Set Thinking Effort..."
+      },
+      {
+        "command": "dekgo.showUsageDetails",
+        "title": "Dek Go: Show Usage Details"
+      },
+      {
+        "command": "dekgo.setUsageTargets",
+        "title": "Dek Go: Set Usage Targets\u2026"
+      },
+      {
+        "command": "dekgo.showUsageQuickPick",
+        "title": "Dek Go: Show Usage Quick Pick"
+      },
+      {
+        "command": "dekgo.renameActiveProfile",
+        "title": "Dek Go: Rename Active Profile"
+      },
+      {
+        "command": "dekgo.deleteProfile",
+        "title": "Dek Go: Delete Profile"
+      },
+      {
+        "command": "dekgo.configureVisionProxy",
+        "title": "Dek Go: Configure Vision Proxy"
+      },
+      {
+        "command": "dekgateway.manage",
+        "title": "Dek Gateway: Manage Provider"
+      },
+      {
+        "command": "dekgateway.setApiKey",
+        "title": "Dek Gateway: Set API Key"
+      },
+      {
+        "command": "dekgateway.refreshModels",
+        "title": "Dek Gateway: Refresh Models"
+      },
+      {
+        "command": "dekgateway.diagnostics",
+        "title": "Dek Gateway: Diagnostics"
+      }
+    ],
+    "configuration": {
+      "title": "Dek Copilot Chat",
+      "properties": {
+        "dekgo.temperature": {
+          "type": "number",
+          "default": 0.2,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Sampling temperature used for chat completions."
+        },
+        "dekgo.maxTokens": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "Optional max output token override. Use 0 to request each Dek model's configured maximum."
+        },
+        "dekgo.maxInputTokens": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "Optional context size override advertised to VS Code. Use 0 to advertise each Dek model's configured context window."
+        },
+        "dekgo.debugReasoning": {
+          "type": "boolean",
+          "default": false,
+          "description": "Write provider reasoning_content to the Dek output channel for debugging. Reasoning is not shown in Copilot Chat."
+        },
+        "dekgo.requestTimeoutSeconds": {
+          "type": "number",
+          "default": 600,
+          "minimum": 1,
+          "description": "Total request timeout in seconds for Dek Go and Zen chat requests. Prevents long-running Copilot requests from hanging indefinitely."
+        },
+        "dekgo.streamIdleTimeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "minimum": 1,
+          "description": "Streaming idle timeout in seconds. If Dek stops sending response chunks for this long, the request is cancelled with a clear error."
+        },
+        "dekgo.showUsageStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the latest Dek prompt/output/cache usage summary in the VS Code status bar after each response."
+        },
+        "dekgo.showProviderPrefix": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Dek Go or Dek Zen provider prefix in model names."
+        },
+        "dekgo.freeOnly": {
+          "type": "boolean",
+          "default": true,
+          "description": "When enabled, only free Dek Zen models are shown in the Copilot model selector. Disable to include paid Zen models as well."
+        },
+        "dekgo.agentsWindow": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Register separate agent-host providers for the Copilot Agents window. Disable to hide the Agents section entirely. Requires a window reload to take effect."
+        },
+        "dekgo.showAgentModelsInManagePanel": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Show agent-host vendors in the Manage Language Models panel. When disabled (default), agent models still work in the Agents window but are hidden from the Manage panel to reduce clutter."
+        },
+        "dekgo.stripThinkTags": {
+          "type": "string",
+          "enum": [
+            "never",
+            "auto",
+            "always"
+          ],
+          "default": "auto",
+          "markdownDescription": "How to handle `<think>...</think>` tags in model output. `auto` strips tags only for known reasoning models that inline thinking in the content field (minimax), accumulating the extracted reasoning content into the existing reasoning fallback. `always` strips for every model. `never` passes text through unchanged (use if a model legitimately uses `<think>` in its output)."
+        },
+        "dekgo.thinking.deepseek": {
+          "type": "string",
+          "enum": [
+            "off",
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": "off",
+          "markdownDescription": "Thinking mode for DeepSeek models (`deepseek-v4-flash`, `deepseek-v4-pro`). Maps to `reasoning_effort`. `low`/`medium`/`high` adjust reasoning depth; `max` enables maximum reasoning."
+        },
+        "dekgo.thinking.glm": {
+          "type": "string",
+          "enum": [
+            "off",
+            "high",
+            "max"
+          ],
+          "default": "off",
+          "markdownDescription": "Thinking mode for GLM models. `high`/`max` enable thinking (interpreted as `on` for models that use toggle, e.g., GLM 5/5.1). Per-model picker shows only options supported by each model."
+        },
+        "dekgo.thinking.kimi": {
+          "type": "string",
+          "enum": [
+            "on",
+            "off"
+          ],
+          "default": "off",
+          "markdownDescription": "Thinking mode for Kimi models (`kimi-k2.5`, `kimi-k2.6`). Maps to `thinking: { type: 'enabled' | 'disabled' }`."
+        },
+        "dekgo.thinking.minimax": {
+          "type": "string",
+          "enum": [
+            "off",
+            "on"
+          ],
+          "default": "off",
+          "markdownDescription": "Thinking mode for MiniMax models (`minimax-m2.5`, `minimax-m3`, etc.). Maps to `thinking: { type: 'disabled'|'adaptive'|'enabled' }`. The Dek gateway only supports on/off for this family (`reasoning_effort` is silently ignored)."
+        },
+        "dekgo.thinking.mimo": {
+          "type": "string",
+          "enum": [
+            "off",
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": "off",
+          "markdownDescription": "Thinking mode for Mimo (Xiaomi) models. Maps to `reasoning_effort`. `low`/`medium`/`high` adjust reasoning depth."
+        },
+        "dekgo.thinking.qwen": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "on",
+            "off"
+          ],
+          "default": "off",
+          "markdownDescription": "Thinking mode for Qwen models (`qwen3.5-plus`, `qwen3.6-plus`, `qwen3.6-plus-free`). Maps to `enable_thinking`. `auto` lets the model decide (omits the flag), `on`/`off` force-enable or disable hybrid thinking. Off is the recommended default to avoid empty Copilot replies."
+        },
+        "dekgo.thinking.qwenBudget": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "4096",
+            "16384",
+            "32768",
+            "81920"
+          ],
+          "default": "auto",
+          "markdownDescription": "Optional `thinking_budget` for Qwen models when thinking is `on` or `auto`. `auto` omits the field. Ignored when Qwen thinking is `off`."
+        }
+      }
+    },
+    "languageModelChatProviders": [
+      {
+        "vendor": "dekgo",
+        "displayName": "Dek Go",
+        "managementCommand": "dekgo.manage",
+        "configuration": {
+          "type": "object",
+          "required": [
+            "apiKey"
+          ],
+          "properties": {
+            "apiKey": {
+              "type": "string",
+              "title": "Dek Go API Key",
+              "description": "Enter your Dek Go API key.",
+              "secret": true
+            }
+          }
+        }
+      },
+      {
+        "vendor": "dekzen",
+        "displayName": "Dek Zen",
+        "managementCommand": "dekzen.manage",
+        "configuration": {
+          "type": "object",
+          "required": [
+            "apiKey"
+          ],
+          "properties": {
+            "apiKey": {
+              "type": "string",
+              "title": "Dek Zen API Key",
+              "description": "Enter your Dek Zen API key.",
+              "secret": true
+            }
+          }
+        }
+      },
+      {
+        "vendor": "dekgateway",
+        "displayName": "Dek Gateway",
+        "managementCommand": "dekgateway.manage",
+        "configuration": {
+          "type": "object",
+          "required": [
+            "apiKey"
+          ],
+          "properties": {
+            "apiKey": {
+              "type": "string",
+              "title": "Dek Gateway Key",
+              "description": "Enter your Dek Gateway key (PROXY_KEYS from .env).",
+              "secret": true
+            }
+          }
+        }
+      },
+      {
+        "vendor": "dekgo-agent",
+        "displayName": "Dek Go (Agents)",
+        "managementCommand": "dekgo.manage",
+        "when": "config.dekgo.showAgentModelsInManagePanel"
+      },
+      {
+        "vendor": "dekzen-agent",
+        "displayName": "Dek Zen (Agents)",
+        "managementCommand": "dekzen.manage",
+        "when": "config.dekgo.showAgentModelsInManagePanel"
+      }
+    ]
+  },
+  "scripts": {
+    "lint": "npm run lint:js && npm run lint:md",
+    "lint:js": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:md": "markdownlint-cli2 --config .markdownlint.json \"**/*.md\" \"#node_modules\" \"#docs/**\"",
+    "lint:md:all": "markdownlint-cli2 --config .markdownlint.json \"**/*.md\" \"#node_modules\"",
+    "format": "npx prettier --write .",
+    "format:check": "npx prettier --check .",
+    "clean": "node -e \"require('node:fs').rmSync('out', { recursive: true, force: true })\"",
+    "compile": "npm run clean && tsc -p ./",
+    "test": "npm run compile && node scripts/run-unit-tests.mjs",
+    "watch": "npm run clean && tsc -watch -p ./",
+    "validate-models": "npx --yes tsx scripts/validate-models.mts",
+    "test-retry": "npx --yes tsx scripts/test-retry-e2e.mts",
+    "prepackage": "npm test",
+    "package": "vsce package",
+    "vscode:prepublish": "npm run compile",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs,ts,mts,cts}": [
+      "eslint --fix --max-warnings 0"
+    ],
+    "*.{json,jsonc,yml,yaml,css,scss,less,html,svg}": "prettier --write"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "@types/vscode": "^1.125.0",
+    "@vscode/vsce": "^3.9.2",
+    "eslint": "^10.8.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "markdownlint-cli2": "^0.23.2",
+    "prettier": "^3.9.6",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.66.0"
+  },
+  "dependencies": {
+    "@silvia-odwyer/photon-node": "^0.3.4"
+  }
+}

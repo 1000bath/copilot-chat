@@ -1,0 +1,365 @@
+**Status:** ✅ Solved
+
+# Dek Provider Architecture
+
+**Topic:** provider / models / routing / usage / security  
+**Updated:** 2026-06-24  
+**Tags:** #provider #models #routing #byok #vscode #tool-calling #thinking #usage #security  
+**Supersedes:** -
+**Original Session:** 2026-05-14  
+**Documented:** 2026-06-12
+**Last verified:** 2026-06-24
+
+> **Note:** This is a living reference document. All timeline entries below are ✅ Solved and reflect the current codebase. The document is periodically updated as new releases are shipped.
+
+---
+
+## Overview
+
+Dek Copilot Chat is a VS Code extension that registers Dek models as native GitHub Copilot Chat language models through the VS Code Language Model Chat Provider API.
+
+The extension exposes two independent BYOK providers:
+
+| Provider     | Vendor ID     | Purpose                                       | Model Source                           |
+| ------------ | ------------- | --------------------------------------------- | -------------------------------------- |
+| Dek Go  | `dekgo`  | Paid Go/top-up models                         | `https://opencode.ai/zen/go/v1/models` |
+| Dek Zen | `dekzen` | Free Zen models by default, paid Zen optional | `https://opencode.ai/zen/v1/models`    |
+
+Both providers can be configured at the same time through VS Code **Language Models → Add Models...**. Each provider group owns its own API key secret in VS Code's native provider configuration flow, so Go and Zen can be added, configured, and removed separately.
+
+This document is intentionally backdated to the original provider-architecture session on 2026-05-14. Later sections include follow-up changes through 2026-07-02 so maintainers can understand the full evolution without opening multiple changelog entries.
+
+---
+
+## Timeline
+
+| Date       | Version | Change                                                                                                                                                                                                    | Status    |
+| ---------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| 2026-05-14 | 0.1.0   | Initial Dek Go provider, model list, fallback limits, endpoint routing, tool support, and diagnostics                                                                                                | ✅ Solved |
+| 2026-05-14 | 0.1.1   | Native VS Code Language Models BYOK configuration schema and secret `apiKey` flow                                                                                                                         | ✅ Solved |
+| 2026-05-14 | 0.1.2   | Separate Dek Zen provider, free-model filtering, key caching, tool-call streaming, and DeepSeek reasoning replay                                                                                     | ✅ Solved |
+| 2026-05-16 | 0.1.3   | Context-size metadata corrected and model limits split per provider                                                                                                                                       | ✅ Solved |
+| 2026-05-17 | 0.1.4   | Zen `freeOnly`, per-model thinking configuration, model-label fixes, schema sanitization, and unavailable-model filtering                                                                                 | ✅ Solved |
+| 2026-05-21 | 0.1.6   | Request timeout, sticky gateway headers, models.dev cache, Zen GPT `/responses`, and Zen Gemini routing                                                                                                   | ✅ Solved |
+| 2026-05-27 | 0.1.7   | Transport diagnostics, usage status bar, usage DataPart, context-window hook, and Dek auth/body fixes                                                                                                | ✅ Solved |
+| 2026-06-04 | 0.1.8   | Pricing metadata, modality detection, provider capability shape, and redundant experimental context setting removal                                                                                       | ✅ Solved |
+| 2026-06-05 | 0.2.0   | Go Usage Tracker for subscription limits and cost tracking                                                                                                                                                | ✅ Solved |
+| 2026-06-09 | 0.2.4   | Context Size selector, dynamic reasoning options, Mimo/MiniMax/DeepSeek/Kimi thinking controls, and strip-think-tags setting                                                                              | ✅ Solved |
+| 2026-06-12 | 0.2.7   | Temperature support guard and Kimi thinking documentation correction                                                                                                                                      | ✅ Solved |
+| 2026-06-23 | 0.3.4   | VS Code ≥1.126 model picker crash fix: `category` type from object to string, secrets fallback via `options.configuration` discriminator, agent variant independent resolution                            | ✅ Solved |
+| 2026-06-24 | 0.3.4   | Security hardening: removed API key debug log leak, Clear API Key BYOK warning, `reasoningContentByToolCallId` memory cap at 500, removed dead `agentProvidersByBaseVendor` map and `categoryOrder` field | ✅ Solved |
+| 2026-08-03 | 0.5.0   | Issue [#86](https://github.com/1000bath/dek-copilot-chat/issues/86) (PR [#101](https://github.com/1000bath/dek-copilot-chat/pull/101)): dropped the `isAgentVariant \|\| options.configuration` guard so non-agent `dekzen` / `dekgo` providers fall back to `SecretStorage` whenever `options.configuration` is absent. Mirrors Copilot's own `AbstractLanguageModelChatProvider`. The previous in-code comment claiming `configuration=undefined` was a transient "still resolving" state was incorrect. | ✅ Solved |
+| 2026-08-05 | 0.5.0   | Issue [#106](https://github.com/1000bath/dek-copilot-chat/issues/106) (PR [#108](https://github.com/1000bath/dek-copilot-chat/pull/108)): regression from the #86 fix where a native BYOK group caused every Zen model to be listed twice. The provider now records per vendor when a BYOK group exists and keeps the groupless call silent in that case. | ✅ Solved |
+| 2026-08-07 | Unreleased | PR [#113](https://github.com/1000bath/dek-copilot-chat/pull/113) bridge hardening (#103 + #109): `truncation: "auto"` + bounded output on Responses, tool/MCP schemas in prompt estimates, proportional tokenizer headroom, upstream-count HTTP 400 recovery across 4 transports, `editTools` dropped for Marketplace, cold-start `SecretStorage` credentials, runtime diagnostics, blocking CI | ✅ Solved |
+
+---
+
+## Goals
+
+1. Make Dek Go and Dek Zen models available directly in GitHub Copilot Chat.
+2. Preserve the native Copilot Chat model picker, tool-calling loop, and Agent Mode workflow.
+3. Keep Go and Zen setup separate so a user can enable only one provider or both.
+4. Resolve live model metadata whenever possible while keeping a robust bundled fallback.
+5. Route each model family to the transport format expected by the Dek gateway.
+6. Report usage and context-window metadata back to VS Code as accurately as the public and internal APIs allow.
+
+---
+
+## Provider Registration
+
+Provider registration starts in `src/extension.ts`.
+
+```ts
+vscode.lm.registerLanguageModelChatProvider(GO_VENDOR, goProvider);
+vscode.lm.registerLanguageModelChatProvider(ZEN_VENDOR, zenProvider);
+```
+
+The vendor constants live in `src/providerTypes.ts`:
+
+| Constant     | Value         |
+| ------------ | ------------- |
+| `GO_VENDOR`  | `dekgo`  |
+| `ZEN_VENDOR` | `dekzen` |
+
+The native provider configuration schema is declared in `package.json` under `contributes.languageModelChatProviders`. VS Code prompts for a group name first, then the provider-specific `apiKey` secret field.
+
+### Configuration Commands
+
+| Command                              | Purpose                                                      |
+| ------------------------------------ | ------------------------------------------------------------ |
+| `Dek Go: Manage Provider`       | Legacy fallback key management, refresh, and connection test |
+| `Dek Go: Set API Key`           | Legacy fallback key storage                                  |
+| `Dek Go: Diagnostics`           | Go model and transport diagnostics                           |
+| `Dek Zen: Diagnostics`          | Zen model and transport diagnostics                          |
+| `Dek: Model Picker Diagnostics` | Cross-provider model metadata comparison                     |
+| `Dek: Set Thinking Effort...`   | Global thinking-mode helper for supported families           |
+
+The recommended setup path is still VS Code's native **Language Models** UI. The legacy commands remain for diagnostics and fallback compatibility.
+
+---
+
+## API Key Handling
+
+The native provider configuration passes the API key through `options.configuration.apiKey` during model listing and request handling. Because VS Code may not always pass provider configuration into every chat response call, the provider also caches resolved keys by model ID after successful model discovery.
+
+For model discovery (`provideLanguageModelChatInformation`), the extension resolves the key in two steps:
+
+1. Read `options.configuration.apiKey` (the native BYOK value) if VS Code supplied one.
+2. If step 1 produced nothing, fall back to `SecretStorage` unconditionally.
+
+The unconditional fallback (since 0.5.0, [#86](https://github.com/1000bath/dek-copilot-chat/issues/86)) covers users who stored the key via the extension command `Dek Go: Set API Key` instead of the native BYOK flow. It mirrors Copilot's own `AbstractLanguageModelChatProvider`, which always falls back to its own storage when `configuration.apiKey` is absent. A per-vendor flag (`hasConfiguredByokGroup`) suppresses the groupless call once a native BYOK group exists, so models are not listed twice ([#106](https://github.com/1000bath/dek-copilot-chat/issues/106)).
+
+Security rules:
+
+- Real API keys are never written to repository files.
+- Documentation must use placeholders only.
+- API keys should be entered through VS Code's native secret-backed provider configuration.
+- Legacy `SecretStorage` support remains only as a fallback path.
+
+Safe placeholder example:
+
+```bash
+OPENCODE_API_KEY=<YOUR_API_KEY>
+```
+
+---
+
+## Model Discovery
+
+Model discovery uses this sequence:
+
+1. Fetch live provider model list from Dek.
+2. Merge live data with `models.dev` metadata when available.
+3. Use cached `models.dev` metadata for up to six hours.
+4. Fall back to bundled metadata from `src/metadata.ts`.
+
+### Live Sources
+
+| Provider     | Endpoint                               |
+| ------------ | -------------------------------------- |
+| Dek Go  | `https://opencode.ai/zen/go/v1/models` |
+| Dek Zen | `https://opencode.ai/zen/v1/models`    |
+| models.dev   | `https://models.dev/api.json`          |
+
+### Metadata Resolution
+
+`src/metadata.ts` resolves:
+
+- Context window
+- Max output tokens
+- Vision/audio/video/PDF capability
+- Reasoning support
+- Reasoning options
+- Temperature parameter support
+- Pricing and pricing tiers
+- Model status/deprecation state
+
+The resolved provider-specific metadata is used to populate VS Code `LanguageModelChatInformation`.
+
+---
+
+## Zen Free Model Filtering
+
+Dek Zen can expose free and paid models. By default, the extension limits Zen registration to free models to match the expected Zen setup flow.
+
+The behavior is controlled by:
+
+```json
+{
+  "dekgo.freeOnly": true
+}
+```
+
+When `freeOnly` is enabled, Zen includes:
+
+- Model IDs ending with `-free`
+- Known free non-suffixed IDs such as `big-pickle`
+
+When `freeOnly` is disabled, paid Zen models from the live Zen catalog can also appear.
+
+Known unavailable Zen entries are filtered before registration so stale or temporarily unsupported models do not remain visible purely because `/models` still lists them.
+
+---
+
+## Endpoint Routing
+
+Routing is centralized in `src/routing.ts`.
+
+| Condition                          | Endpoint Kind      | Endpoint                                    |
+| ---------------------------------- | ------------------ | ------------------------------------------- |
+| Zen GPT family (`gpt-*`)           | `responses`        | `/zen/v1/responses`                         |
+| Claude family                      | `messages`         | `/zen/v1/messages`                          |
+| Go MiniMax M2 family               | `messages`         | `/zen/go/v1/messages`                       |
+| Qwen 3.5/3.6 Plus and Qwen 3.7 Max | `messages`         | provider messages endpoint                  |
+| Zen Gemini family                  | `google`           | `streamGenerateContent?alt=sse` style route |
+| All other models                   | `chat-completions` | provider chat-completions endpoint          |
+
+The request layer maps VS Code chat parts and tools into the correct request body for the selected endpoint.
+
+### Auth Header Mapping
+
+`src/openCodeAuth.ts` maps auth headers by endpoint type:
+
+| Endpoint Kind      | Header                                   |
+| ------------------ | ---------------------------------------- |
+| `chat-completions` | `Authorization: Bearer <key>`            |
+| `responses`        | `Authorization: Bearer <key>`            |
+| `messages`         | `x-api-key: <key>` + `anthropic-version` |
+| `google`           | `x-goog-api-key: <key>`                  |
+
+---
+
+## Tool Calling
+
+Tool calling is required for Copilot Agent workflows such as reading files, searching code, editing files, and running terminal commands.
+
+The extension supports:
+
+- OpenAI-compatible `tool_calls`
+- Anthropic-compatible `tool_use` blocks
+- Responses API function-call normalization
+- Gemini function-call normalization
+- Tool result conversion back into provider-specific chat history
+
+Streaming parsers accumulate partial tool-call argument chunks before emitting VS Code `LanguageModelToolCallPart` instances.
+
+---
+
+## Thinking And Reasoning
+
+Thinking support is model-family specific and is configured through `dekgo.thinking.*` settings plus dynamic `models.dev` reasoning metadata.
+
+| Family   | Setting                                     | Payload Behavior               |
+| -------- | ------------------------------------------- | ------------------------------ |
+| DeepSeek | `dekgo.thinking.deepseek`              | Maps to reasoning effort       |
+| GLM      | `dekgo.thinking.glm`                   | Maps to `thinking: { type }`   |
+| Kimi     | `dekgo.thinking.kimi`                  | Maps to `thinking: { type }`   |
+| MiniMax  | `dekgo.thinking.minimax`               | Maps to on/off thinking shape  |
+| Mimo     | `dekgo.thinking.mimo`                  | Maps to reasoning effort       |
+| Qwen     | `dekgo.thinking.qwen` and `qwenBudget` | Maps to Qwen thinking controls |
+
+Reasoning content is handled carefully:
+
+- Provider `reasoning_content` is captured during streaming.
+- Tool-call follow-up requests can replay required reasoning content when the upstream provider requires it.
+- `dekgo.debugReasoning` can write raw reasoning content to **Output → Dek** for debugging.
+- Reasoning is not directly displayed in Copilot Chat unless VS Code exposes a compatible surface.
+
+---
+
+## Context Window And Usage Reporting
+
+The extension reports model context metadata through VS Code `LanguageModelChatInformation`:
+
+- `maxInputTokens`
+- `maxOutputTokens`
+- model capabilities
+- pricing and detail metadata when available
+
+For very large-output models, the extension separates UI-friendly advertised values from actual request `max_tokens` so the Language Models table, model picker tooltip, and Copilot Chat context indicator remain consistent.
+
+The usage path includes:
+
+- `src/usage.ts` for normalized prompt/output/cache usage snapshots
+- `src/goUsageTracker.ts` for Go subscription tracking
+- `src/contextWindowHook.ts` for bridging BYOK usage into VS Code's internal context-window UI
+- status bar summaries for latest response usage
+- recent transport summaries persisted to VS Code `globalState`
+
+### Context Safety
+
+Since PR #113, request budgets are bounded so long and tool-heavy sessions are not rejected by the upstream tokenizer:
+
+- Prompt estimates (`src/tokenEstimate.ts`) include Copilot/MCP tool schemas, not just message text, and run after vision proxying and old-image trimming.
+- `src/modelLimits.ts` reserves proportional tokenizer headroom (12% of the local prompt estimate, floor 64 tokens) instead of a fixed margin, and caps the requested output to the context remaining after the prompt.
+- Responses requests (`src/responsesRequest.ts`) send `truncation: "auto"` and omit the proxy-sensitive `text.verbosity` field.
+- If upstream still reports an exact context overflow (HTTP 400 with authoritative counts), `src/retry.ts` reduces the `max_tokens` / `max_output_tokens` / `max_completion_tokens` / Gemini `generationConfig.maxOutputTokens` budget and retries once, across all four transports.
+
+The context-window hook silently no-ops if VS Code internals change or cannot be captured.
+
+---
+
+## Diagnostics
+
+Diagnostics are designed to answer whether a model is registered, where its metadata came from, and what happened during recent transport requests.
+
+| Diagnostic               | Includes                                                    |
+| ------------------------ | ----------------------------------------------------------- |
+| Dek Go Diagnostics  | Go models, metadata, routing, recent Go request summaries   |
+| Dek Zen Diagnostics | Zen models, metadata, routing, recent Zen request summaries |
+| Model Picker Diagnostics | Go, Zen, and Copilot model metadata side by side            |
+
+Recent summaries include endpoint kind, initiator, metadata source, request IDs, usage, latency, and errors when available.
+
+---
+
+## Files Changed
+
+Core implementation files:
+
+- `src/extension.ts`
+- `src/providerTypes.ts`
+- `src/routing.ts`
+- `src/streaming.ts`
+- `src/metadata.ts`
+- `src/openCodeAuth.ts`
+- `src/chatParts.ts`
+- `src/usage.ts`
+- `src/goUsageTracker.ts`
+- `src/contextWindowHook.ts`
+- `src/retry.ts` (400 parameter + context-overflow recovery, transient 5xx classification)
+- `src/modelLimits.ts` (advertised vs request limits, proportional tokenizer headroom)
+- `src/responsesRequest.ts` (Responses request envelope: `truncation: "auto"`, bounded output)
+- `src/tokenEstimate.ts` (prompt estimate incl. tool/MCP schemas)
+- `src/modelCapabilities.ts` (proposal-safe capabilities, no `editTools`)
+- `src/apiKeyResolution.ts` (configured → registered → SecretStorage key resolution)
+- `src/runtimeDiagnostics.ts` (runtime/elevation diagnostics)
+- `package.json`
+
+Documentation and release files:
+
+- `README.md`
+- `CHANGELOG.md`
+- `docs/devlog.md`
+- `docs/architecture/01-20260514-open-code-provider-architecture.md`
+
+---
+
+## Verification
+
+Codebase verification performed on 2026-06-12:
+
+```bash
+rg -n "registerLanguageModelChatProvider|GO_VENDOR|ZEN_VENDOR" src package.json
+rg -n "resolveModelRouting|responses|messages|google|chat-completions" src
+rg -n "freeOnly|models.dev|MODEL_METADATA_CACHE" src package.json README.md
+rg -n "contextWindowHook|LanguageModelDataPart|usage" src README.md
+```
+
+Expected verification before release:
+
+```bash
+npm run compile
+npm run package
+```
+
+Manual smoke test:
+
+1. Install the VSIX.
+2. Reload VS Code.
+3. Open **Language Models → Add Models...**.
+4. Add **Dek Go** with a Go API key.
+5. Add **Dek Zen** with a Zen API key.
+6. Confirm both provider groups appear separately.
+7. Confirm Zen free models appear when `dekgo.freeOnly` is enabled.
+8. Select one Go model and one Zen model in Copilot Chat and run a tool-using prompt.
+
+---
+
+## Operational Notes
+
+- Do not document real API keys, VS Code secret values, or user-specific `globalState` contents.
+- Prefer native Language Models provider configuration over legacy command-based key storage.
+- Keep provider-specific model limits separate because Go and Zen can share model IDs with different context/output limits.
+- Treat `models.dev` as an enrichment source, not the only source of truth.
+- Keep routing tests focused on endpoint kind and payload shape because endpoint regressions usually break tool calling first.
