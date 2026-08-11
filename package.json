@@ -402,7 +402,7 @@
     "lint-staged": "^17.3.0",
     "markdownlint-cli2": "^0.23.2",
     "prettier": "^3.9.6",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "typescript-eslint": "^8.66.0"
   },
   "dependencies": {
