@@ -1,5 +1,5 @@
 {
-  "name": "dek-copilot-chat",
+  "name": "copilot-chat",
   "displayName": "Dek Copilot Chat",
   "description": "Use AI models in GitHub Copilot Chat through Dek Gateway. Bring Your Own Key with native chat, tools, reasoning, and multimodal support.",
   "version": "0.5.1",
@@ -39,7 +39,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/1000bath/dek-copilot-chat.git"
+    "url": "https://github.com/1000bath/copilot-chat.git"
   },
   "bugs": {
     "url": "https://github.com/1000bath/dek-copilot-chat/issues"
