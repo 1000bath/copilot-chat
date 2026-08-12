@@ -4,3 +4,13 @@ out/
 .DS_Store
 scripts/validate-models.mjs
 scripts/validate-models.mjs.map
+
+# Spider local/generated artifacts
+.env
+.env.*
+!.env.example
+coverage/
+*.log
+*.tsbuildinfo
+# Local CodeGraph index (regenerable, machine-specific)
+.codegraph/
