@@ -6,13 +6,13 @@
 
 ## 🎯 Ways to contribute (easy → hard)
 
-| Level           | What                       | How                                                                                                                  |
-| --------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| ⭐ **Easiest**  | Star the repo              | Click ⭐ top-right                                                                                                   |
+| Level           | What                       | How                                                                                                           |
+| --------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| ⭐ **Easiest**  | Star the repo              | Click ⭐ top-right                                                                                            |
 | 🐛 **Easy**     | Report a bug               | [Open an issue](https://github.com/1000bath/dek-copilot-chat/issues/new?template=bug_report.md)               |
 | 💡 **Easy**     | Suggest a feature or model | [Open a discussion](https://github.com/1000bath/dek-copilot-chat/discussions)                                 |
-| 📸 **Easy**     | Add a screenshot or GIF    | Drop in `docs/screenshots/`, open PR                                                                                 |
-| 📝 **Medium**   | Fix a typo / improve docs  | Edit README or `docs/`, open PR                                                                                      |
+| 📸 **Easy**     | Add a screenshot or GIF    | Drop in `docs/screenshots/`, open PR                                                                          |
+| 📝 **Medium**   | Fix a typo / improve docs  | Edit README or `docs/`, open PR                                                                               |
 | 🔧 **Medium**   | Fix a bug                  | Look for [`good first issue`](https://github.com/1000bath/dek-copilot-chat/labels/good%20first%20issue) label |
 | 🚀 **Advanced** | Add a new model or feature | [Start a discussion](https://github.com/1000bath/dek-copilot-chat/discussions) first, then PR                 |
 

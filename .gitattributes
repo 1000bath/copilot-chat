@@ -1,0 +1,6 @@
+# The repo stores LF. Without this, a Windows checkout with core.autocrlf=true
+# commits CRLF back, and `prettier --check` (endOfLine: lf) fails every file
+# on the Linux CI runner.
+* text=auto eol=lf
+*.png binary
+*.vsix binary

@@ -1,0 +1,8 @@
+node_modules/
+out/
+media/
+*.vsix
+
+# Design notes and devlogs are prose kept in the author's own layout.
+# markdownlint already excludes docs/** for the same reason.
+docs/

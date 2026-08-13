@@ -1,12 +1,5 @@
 import * as vscode from "vscode";
-import {
-  buildDekRequestError,
-  formatDuration,
-  formatRateLimitSummary,
-  DekRequestError,
-  readRateLimitInfo,
-  truncateForLog,
-} from "./errors";
+import { buildDekRequestError, formatDuration, formatRateLimitSummary, DekRequestError, readRateLimitInfo, truncateForLog } from "./errors";
 import {
   analyzeHttp400ForRetry,
   isTransientServerError,

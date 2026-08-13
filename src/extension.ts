@@ -2529,10 +2529,7 @@ async function clearDekModelMetadataCache(context: vscode.ExtensionContext): Pro
   await context.globalState.update(MODEL_METADATA_CACHE_KEY, undefined);
 }
 
-async function getDekModelMetadata(
-  context: vscode.ExtensionContext,
-  output?: vscode.OutputChannel,
-): Promise<CachedModelMetadataSnapshot> {
+async function getDekModelMetadata(context: vscode.ExtensionContext, output?: vscode.OutputChannel): Promise<CachedModelMetadataSnapshot> {
   const cached = modelMetadataSnapshot ?? context.globalState.get<CachedModelMetadataSnapshot>(MODEL_METADATA_CACHE_KEY);
   if (cached) {
     modelMetadataSnapshot = cached;
