@@ -197,7 +197,7 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 10 * 60 * 1000;
 const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 2 * 60 * 1000;
 const OPEN_CODE_CLIENT = "vscode-copilot-chat";
 /** Fallback only — overridden at runtime by {@link getUserAgent} from packageJSON. */
-const FALLBACK_USER_AGENT = "dek-copilot-chat/0.4.1 VSCode";
+const FALLBACK_USER_AGENT = "outrig/0.5.1 VSCode";
 
 /**
  * Hard ceiling for a single model-list fetch (connect + headers + body).
@@ -229,8 +229,8 @@ let cachedUserAgent: string | undefined;
  */
 function getUserAgent(): string {
   if (cachedUserAgent) return cachedUserAgent;
-  const version = vscode.extensions.getExtension("1000bath.dek-copilot-chat")?.packageJSON?.version;
-  cachedUserAgent = typeof version === "string" && version ? `dek-copilot-chat/${version} VSCode` : FALLBACK_USER_AGENT;
+  const version = vscode.extensions.getExtension("1000bath.outrig")?.packageJSON?.version;
+  cachedUserAgent = typeof version === "string" && version ? `outrig/${version} VSCode` : FALLBACK_USER_AGENT;
   return cachedUserAgent;
 }
 
