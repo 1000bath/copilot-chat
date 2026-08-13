@@ -397,7 +397,7 @@
     "@types/node": "^26.1.0",
     "@types/vscode": "^1.125.0",
     "@vscode/vsce": "^3.9.2",
-    "eslint": "^10.8.0",
+    "eslint": "^10.8.1",
     "husky": "^9.1.7",
     "lint-staged": "^17.3.0",
     "markdownlint-cli2": "^0.23.2",
